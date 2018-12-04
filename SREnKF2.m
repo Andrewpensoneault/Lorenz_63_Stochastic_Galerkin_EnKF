@@ -1,0 +1,40 @@
+function[mp,C,X1a,X2a,X3a] = SREnKF2(X1,X2,X3,genfunc,H,y,R,nbv)
+[meas_dim, ~] = size(H);
+Z = randn(3,nbv);
+X1a = zeros(3,3,3);
+X2a = zeros(3,3,3);
+X3a = zeros(3,3,3);
+for i=1:nbv
+    Xprior(:,i) = genfunc(X1,X2,X3,Z(1,i),Z(2,i),Z(3,i));
+end
+m = [X1(1,1,1),X2(1,1,1),X3(1,1,1)]';
+C(1,1) = sum(sum(sum(X1.*X1)))-X1(1,1,1)*X1(1,1,1);
+C(1,2) = sum(sum(sum(X1.*X2)))-X1(1,1,1)*X2(1,1,1);
+C(1,3) = sum(sum(sum(X1.*X3)))-X1(1,1,1)*X3(1,1,1);
+C(2,1) = sum(sum(sum(X2.*X1)))-X2(1,1,1)*X1(1,1,1);
+C(2,2) = sum(sum(sum(X2.*X2)))-X2(1,1,1)*X2(1,1,1);
+C(2,3) = sum(sum(sum(X2.*X3)))-X2(1,1,1)*X3(1,1,1);
+C(3,1) = sum(sum(sum(X3.*X1)))-X3(1,1,1)*X1(1,1,1);
+C(3,2) = sum(sum(sum(X3.*X2)))-X3(1,1,1)*X2(1,1,1);
+C(3,3) = sum(sum(sum(X3.*X3)))-X3(1,1,1)*X3(1,1,1);
+CHT =C*H';
+Xpert = Xprior-m;
+S = H*CHT + R*eye(meas_dim);
+K = CHT*inv(S);
+Ktilde = CHT*inv(chol(H*CHT+R*eye(meas_dim)))'*inv(chol(H*CHT+R*eye(meas_dim))+sqrt(R)*eye(meas_dim));
+KH = K*H;
+KY = K*y;
+mp = m + K*(y-H*m);
+Xperta = Xpert - Ktilde*H*Xpert;
+X = mp + Xperta;
+C = (Xperta*Xperta')/(nbv-1);
+for i=1:nbv
+    H = hermite_matrix(Z(1,i),Z(2,i),Z(3,i));
+    X1a = X1a+X(1,i)*H;
+    X2a = X2a+X(2,i)*H;
+    X3a = X3a+X(3,i)*H;
+end
+X1a = X1a/nbv;
+X2a = X2a/nbv;
+X3a = X3a/nbv;    
+end
